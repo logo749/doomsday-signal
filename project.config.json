@@ -1,0 +1,12 @@
+{
+  "minigameRoot": "./",
+  "setting": {
+    "es6": true,
+    "minified": false,
+    "urlCheck": false
+  },
+  "appid": "",
+  "projectname": "doomsday-signal",
+  "compileType": "game",
+  "condition": {}
+}
