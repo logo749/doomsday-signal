@@ -8,7 +8,7 @@
 
 - 规则集 ID：`doomsday-merge-v1`（全部数值集中在 `js/game-core.js` 顶部 `RULESET`，唯一数值来源）
 - 逻辑分辨率：750×1334 竖屏，等比缩放适配任意屏幕（黑边填充）
-- 技术：纯 Canvas 2D，零依赖、零外部资源（图标用系统 Emoji），抖音小游戏与 H5 共用同一核心
+- 技术：纯 Canvas 2D，零依赖；物资图标与合成爆点来自 AI 生成图集（`assets/`），未就绪自动回退 Emoji；抖音小游戏与 H5 共用同一核心
 
 ## 运行方式
 
@@ -70,6 +70,8 @@ python3 -m http.server 8080
 ├── game.json             # 竖屏配置
 ├── project.config.json   # 抖音工程配置（appid 待填）
 ├── js/game-core.js       # 规则集 + 逻辑 + 渲染 + 输入（双端共用）
+├── js/sprites.js         # 图集与爆点绘制层（未就绪回退 Emoji）
+├── assets/               # AI 生成图集（物资 4x3 / 爆点 4x2）
 ├── test/logic-test.js    # 合并纯逻辑单测（node test/logic-test.js）
 └── .github/workflows/deploy.yml  # Pages 自动部署
 ```
@@ -87,5 +89,5 @@ python3 -m http.server 8080
 - 无音效/音乐（零资源策略）；后续可加 WebAudio 合成音
 - 数值为设计初值，未经真实玩家平衡测试；调参只改 `RULESET`
 - 抖音运行时未实测（见上）；未接入广告/排行榜/分享等开放能力——需要时按抖音能力文档另行接入并确认
-- Emoji 图标在不同设备字体下观感略有差异；正式美术可替换 `drawTile/emoji` 为图集
+- 抖音运行时未实测；图集为 64 色量化 PNG，若后续换更高精度美术需同步调 `sprites.js` 的格宽
 - H5 的 dpr 在加载时读取，运行中切换屏幕密度需刷新（真机无此场景）

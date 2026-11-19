@@ -1,4 +1,5 @@
 /* 抖音小游戏入口：竖屏 Canvas，复用 js/game-core.js */
+require('./js/sprites.js');
 require('./js/game-core.js');
 
 var sys = tt.getSystemInfoSync();

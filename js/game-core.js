@@ -191,7 +191,7 @@
       monster: null, attackIn: 0,
       moves: 0, mergeCount: 0, kills: 0,
       slides: null, slideT: 0,
-      pops: {}, spawns: {},
+      pops: {}, spawns: {}, fxs: [],
       floaters: [], shake: 0, monsterFlash: 0, playerFlash: 0,
       banner: null, pendingWave: 0,
       dialogue: null, confirmRestart: false,
@@ -230,7 +230,7 @@
       g.grid = emptyGrid();
       g.score = 0; g.hp = RULESET.player.maxHP; g.shield = 0;
       g.chapter = 0; g.wave = 0; g.moves = 0; g.mergeCount = 0; g.kills = 0;
-      g.floaters = []; g.pops = {}; g.spawns = {}; g.slides = null;
+      g.floaters = []; g.pops = {}; g.spawns = {}; g.slides = null; g.fxs = [];
       g.banner = null; g.pendingWave = 0; g.confirmRestart = false; g.ended = false;
       for (var i = 0; i < RULESET.board.initialTiles; i++) spawnTile();
       spawnMonster();
@@ -318,10 +318,11 @@
       if (!res.moved) return false;
       g.grid = res.grid;
       g.slides = res.slides; g.slideT = 0;
-      g.pops = {};
+      g.pops = {}; g.fxs = [];
       for (var i = 0; i < res.merges.length; i++) {
         var m = res.merges[i];
         g.pops[m.r + ',' + m.c] = 0;
+        g.fxs.push({ r: m.r, c: m.c, t: 0 });
         applyMerge(m);
       }
       spawnTile();
@@ -361,6 +362,10 @@
       var k;
       for (k in g.pops) { g.pops[k] += dt; if (g.pops[k] > RULESET.anim.popMs) delete g.pops[k]; }
       for (k in g.spawns) { g.spawns[k] += dt; if (g.spawns[k] > RULESET.anim.spawnMs) delete g.spawns[k]; }
+      for (var fi = g.fxs.length - 1; fi >= 0; fi--) {
+        g.fxs[fi].t += dt;
+        if (g.fxs[fi].t > G.Sprites.FX_DURATION) g.fxs.splice(fi, 1);
+      }
       for (var i = g.floaters.length - 1; i >= 0; i--) {
         g.floaters[i].t += dt;
         if (g.floaters[i].t > RULESET.anim.floaterMs) g.floaters.splice(i, 1);
@@ -538,12 +543,19 @@
       ctx.fillStyle = def.color; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 2; ctx.stroke();
       if (lv >= 8) { ctx.strokeStyle = 'rgba(255,220,120,0.8)'; ctx.lineWidth = 3; ctx.stroke(); }
-      emoji(def.icon, 0, -22, 62);
+      if (!(G.Sprites && G.Sprites.drawSupply(ctx, lv, 0, -32, 66, g.time))) emoji(def.icon, 0, -22, 62);
       txt(def.name, 0, 38, 24, '#fff', 'center', true);
       txt('Lv' + lv, -BOARD.cell / 2 + 14, -BOARD.cell / 2 + 18, 18, 'rgba(255,255,255,0.65)', 'left');
       ctx.restore();
     }
     function drawBoard() {
+      function drawFxLayer() {
+        if (!g.fxs || !g.fxs.length || !G.Sprites) return;
+        for (var i = 0; i < g.fxs.length; i++) {
+          var f = g.fxs[i], fp = cellXY(f.r, f.c);
+          G.Sprites.drawFx(ctx, fp.x + BOARD.cell / 2, fp.y + BOARD.cell / 2, BOARD.cell * 1.85, f.t / G.Sprites.FX_DURATION);
+        }
+      }
       rr(BOARD.x, BOARD.y, BOARD.w, BOARD.w, 24);
       ctx.fillStyle = '#2a2320'; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2; ctx.stroke();
@@ -563,6 +575,7 @@
           var a = cellXY(sl.fr, sl.fc), b = cellXY(sl.tr, sl.tc);
           drawTile(lerp(a.x, b.x, st), lerp(a.y, b.y, st), sl.lv, 1);
         }
+        drawFxLayer();
         return;
       }
       for (r = 0; r < N; r++) for (c = 0; c < N; c++) {
@@ -578,6 +591,7 @@
         }
         drawTile(p.x, p.y, lv, sc);
       }
+      drawFxLayer();
     }
 
     /* ---------- 覆盖层 ---------- */
