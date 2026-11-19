@@ -114,6 +114,40 @@ def key_bg(im, bg, lo=34, span=58):
     return Image.merge('RGBA', (r2, g, b2, alpha))
 
 
+def key_luma(im, floor=42, ceil=150):
+    """黑底转透明：按亮度生成 alpha，火焰亮部保留、暗部融掉。"""
+    im = im.convert('RGBA')
+    r, g, b, a0 = im.split()
+    l = Image.merge('RGB', (r, g, b)).convert('L')
+    alpha = l.point(lambda v: max(0, min(255, int((v - floor) * 255 / (ceil - floor)))))
+    if a0.getextrema()[0] < 255:
+        alpha = ImageChops.darker(alpha, a0)
+    return Image.merge('RGBA', (r, g, b, alpha))
+
+
+_RADIAL = None
+
+
+def radial_mask(size=128, inner=0.6, falloff=1.6):
+    """中心保持、向外衰减的圆形遮罩，消除方形贴图边界。"""
+    global _RADIAL
+    if _RADIAL is None:
+        img = Image.new('L', (size, size), 0)
+        px = img.load()
+        c = size / 2.0
+        for y in range(size):
+            for x in range(size):
+                d = (((x + 0.5 - c) ** 2 + (y + 0.5 - c) ** 2) ** 0.5) / c
+                if d <= inner:
+                    v = 255
+                else:
+                    t = max(0.0, 1.0 - (d - inner) / (1.06 - inner))
+                    v = int((t ** falloff) * 255)
+                px[x, y] = min(255, v)
+        _RADIAL = img
+    return _RADIAL
+
+
 def save_quant(im, path, colors=64):
     """64 色量化但保住 alpha：Pillow 直接量化 RGBA 会丢透明，这里分开处理。"""
     a = im.getchannel('A')
@@ -163,9 +197,10 @@ def build_assets():
     atlas = Image.new('RGBA', (512, 256), (0, 0, 0, 0))
     for i, (im, s) in enumerate(zip(seq, scales)):
         row, col = divmod(i, 4)
-        atlas.alpha_composite(place(im, s), (col * 128, row * 128))
-    atlas.quantize(colors=64, method=Image.FASTOCTREE, dither=Image.NONE) \
-        .save('assets/merge-fx.png', optimize=True)
+        frame = key_luma(place(im, s))
+        frame.putalpha(ImageChops.darker(frame.getchannel('A'), radial_mask()))
+        atlas.alpha_composite(frame, (col * 128, row * 128))
+    save_quant(atlas, 'assets/merge-fx.png', colors=96)
     print('assets written')
 
 
