@@ -1,14 +1,14 @@
 """一次性素材导入 + 渲染补丁（由 .github/workflows/art-import.yml 调用）。
 
 为什么放在 CI 里：本环境无法直连 git push，二进制图集也过不了文本接口。
-脚本幂等：重复运行不会重复改动；锚点缺失且新代码已存在时跳过。
+脚本幂等：sprites.js 作为导入标记，已导入则只刷新 assets。
 """
 import io
 import os
 import sys
 import urllib.request
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 ICON_URL = 'https://aka.doubaocdn.com/s/YuGuYioRZz'
 FX_URL = 'https://aka.doubaocdn.com/s/9inXz0PrVD'
@@ -87,6 +87,43 @@ SPRITES_JS = '''/* 物资图集 + 合成爆点（可选增强层）
 '''
 
 
+def bg_color(im):
+    """从四角与边缘中点取背景色（图中是玫红，不是纯品红）。"""
+    w, h = im.size
+    pts = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1), (w // 2, 0), (w // 2, h - 1)]
+    px = im.convert('RGB')
+    seq = sorted(px.getpixel(p) for p in pts)
+    return seq[len(seq) // 2]
+
+
+def key_bg(im, bg, lo=34, span=58):
+    """按背景色抠像，并对边缘做去渗色，避免缩放把背景色带进轮廓。"""
+    im = im.convert('RGBA')
+    r, g, b, a0 = im.split()
+    diff = ImageChops.difference(im.convert('RGB'), Image.new('RGB', im.size, bg))
+    dr, dg, db = diff.split()
+    d = ImageChops.lighter(ImageChops.lighter(dr, dg), db)
+    alpha = d.point(lambda v: max(0, min(255, int((v - lo) * 255 / span))))
+    if a0.getextrema()[0] < 255:
+        alpha = ImageChops.darker(alpha, a0)
+    mask = alpha.point(lambda v: 255 if v < 205 else 0)
+    capr = g.point(lambda v: min(255, int(v * 1.2 + bg[0] * 0.1 + 12)))
+    capb = g.point(lambda v: min(255, int(v * 1.2 + bg[2] * 0.1 + 12)))
+    r2 = Image.composite(ImageChops.darker(r, capr), r, mask)
+    b2 = Image.composite(ImageChops.darker(b, capb), b, mask)
+    return Image.merge('RGBA', (r2, g, b2, alpha))
+
+
+def save_quant(im, path, colors=64):
+    """64 色量化但保住 alpha：Pillow 直接量化 RGBA 会丢透明，这里分开处理。"""
+    a = im.getchannel('A')
+    solid = Image.new('RGB', im.size, (0, 0, 0))
+    rgb = Image.composite(im.convert('RGB'), solid, a.point(lambda v: 255 if v > 0 else 0))
+    p = rgb.quantize(colors=colors, method=Image.FASTOCTREE, dither=Image.NONE).convert('RGBA')
+    p.putalpha(a)
+    p.save(path, optimize=True)
+
+
 def fetch(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -95,9 +132,11 @@ def fetch(url):
 
 def build_assets():
     os.makedirs('assets', exist_ok=True)
-    icon = fetch(ICON_URL).resize((384, 288), Image.LANCZOS)
-    icon.quantize(colors=64, method=Image.FASTOCTREE, dither=Image.NONE) \
-        .save('assets/supply-atlas.png', optimize=True)
+    raw = fetch(ICON_URL)
+    bg = bg_color(raw)
+    icon = key_bg(raw, bg).resize((384, 288), Image.LANCZOS)
+    icon = key_bg(icon, bg, lo=26, span=34)
+    save_quant(icon, 'assets/supply-atlas.png')
 
     fx = fetch(FX_URL)
     w, h = fx.size
@@ -217,4 +256,7 @@ if __name__ == '__main__':
     if not os.path.exists('js/sprites.js'):
         open('js/sprites.js', 'w', encoding='utf-8').write(SPRITES_JS)
         print('sprites.js written')
-    apply_patches()
+        apply_patches()
+    else:
+        # sprites.js 是导入标记：已导入则只刷新 assets，不再动源码
+        print('sprites.js exists; rendering patches skipped')
