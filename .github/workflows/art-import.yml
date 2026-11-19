@@ -1,0 +1,52 @@
+name: Import art assets
+
+# 一次性素材导入：拉取 AI 生成图集 -> 缩放到运行时尺寸 -> 应用渲染补丁 -> 提交。
+# 幂等：已打过补丁则跳过；只在自身变更或手动触发时运行。
+on:
+  push:
+    paths:
+      - '.github/workflows/art-import.yml'
+      - 'scripts/art-import.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: pip install --quiet pillow
+
+      - name: Build assets and apply render patch
+        run: python scripts/art-import.py
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no change"
+          else
+            git commit -m "art: 导入 AI 物资图集 + 合成爆点，接入渲染层"
+            git push
+          fi
+
+      # Actions 用 GITHUB_TOKEN 推送不会触发新的 workflow，这里显式唤起部署
+      - name: Trigger Pages deploy
+        if: success()
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}'
