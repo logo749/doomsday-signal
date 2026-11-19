@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>末日信号 · 合并生存</title>
-<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+<title>末日信号 · 背包求生（分支B）</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎒</text></svg>">
 <style>
   html,body{margin:0;padding:0;width:100%;height:100%;background:#0a080c;overflow:hidden}
   canvas{display:block;width:100vw;height:100vh;touch-action:none;-webkit-tap-highlight-color:transparent}
@@ -12,30 +12,6 @@
 </head>
 <body>
 <canvas id="game"></canvas>
-<script src="js/game-core.js"></script>
-<script>
-(function(){
-  var canvas = document.getElementById('game');
-  var dpr = Math.min(window.devicePixelRatio || 1, 3);
-  var params = new URLSearchParams(location.search);
-  var seed = params.has('seed') ? Number(params.get('seed')) : undefined;
-  var game = DM.start({
-    canvas: canvas,
-    width: window.innerWidth,
-    height: window.innerHeight,
-    dpr: dpr,
-    input: 'dom',
-    seed: seed,
-    storage: {
-      get: function(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
-      set: function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
-    }
-  });
-  window.addEventListener('resize', function(){
-    game.resize(window.innerWidth, window.innerHeight);
-  });
-  window.__game = game; // 自动化测试 / 调试入口
-})();
-</script>
+<script src="js/boot.js"></script>
 </body>
 </html>
