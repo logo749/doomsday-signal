@@ -1,11 +1,12 @@
 # 末日信号 · 背包求生（分支 B）
 
 > 试玩：https://logo749.github.io/doomsday-signal/variant-backpack/
-> 分支：`variant/backpack-battles`
+> 分支：`variant/backpack-battles`（从 `main` 拉出）
 
 ## 这套分支在验证什么
 
-把主线「滑动合并」换成 **背包摆放 → 相邻连携/配方 → 自动战斗**，对标 Backpack Battles 的结构：玩法不再是「在棋盘上滑」，而是 **在有限空间里摆**——空间本身、相邻关系就是构筑。
+把主线「滑动合并」换成 **背包摆放 → 相邻连携/配方 → 自动战斗**，对标 Backpack Battles 的结构：
+玩法不再是「在棋盘上滑」，而是 **在有限空间里摆**——空间本身、相邻关系就是构筑。
 
 | 元素 | 规则 |
 | --- | --- |
@@ -23,17 +24,17 @@
 - 战斗前的准备不设时限，考验的是构筑；战斗本身不可操作。
 - 广告/复活的最佳挂点是「开战前补一件道具」和「战败复活」，与主线不同。
 
-## 运行
+## 怎么跑
 
-- H5：直接打开 `index.html`。
-- 抖音小游戏：用抖音开发者工具导入本目录。
+- **H5（本分支的主路径）**：打开 `index.html`，需 Chrome / Edge / Safari 16+（依赖原生 `DecompressionStream`）。
+- **抖音小游戏**：本分支只提供 H5 原型，平台构建仍以 `main` 为准。
+
+## 本分支的构建方式
+
+`js/core.b64.1` ~ `js/core.b64.4` 是 gzip+base64 片段，`js/boot.js` 在浏览器端拼回、解压后执行。
+可维护源码同构于本地工作区 `variant-backpack/`，后续可合并回 `main` 做平台适配。数值与道具表在源码顶部 `ITEMS / FUSIONS / RULESET`。
 
 ## 说明
 
 - 系统结构借鉴 Backpack Battles，**代码、美术、文案全部自研**；零图片资源（Canvas + Emoji）。
-- 数值与道具表在 `js/game-core.js` 顶部 `ITEMS / FUSIONS / RULESET`，可直接调。
-
-## 本分支的构建方式
-
-为避免仓库里出现两套重复的大文件，本分支把原型打成压缩载荷：`js/core.b64.1` ~ `js/core.b64.4` 是 gzip+base64 片段，`js/boot.js` 在浏览器端拼回并解压执行（依赖原生 `DecompressionStream`）。
-可维护的源码仍是主线 `js/game-core.js` 的同构版本；本地原型目录为工作区 `variant-backpack/`。
+- 这套分支的价值在于验证“空间规划 + 相邻连携”能不能比 2048 滑动更耐玩。
